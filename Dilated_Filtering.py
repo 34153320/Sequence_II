@@ -1,10 +1,14 @@
 """
-   Developed by Pengfei Sun. The proposed algorithm 
+   Written by Pengfei Sun. 
 """
 
 import tensorflow as tf
 
 class DFiltering(object):
+      """ Dilated filtering system for feature extraction. 
+          Basically it incorporates the dilated cnn and the memorizing cell of LSTM to realize information transfer
+          in temporal scale and frequecy scale. 
+      """
       def __init__(is_training, input_tensor, num_blocks, dim):
           self.is_training=is_training
           self.input_tensor=input_tensor
@@ -91,5 +95,14 @@ class DFiltering(object):
                                              rate=r, block=i, dim=FLAGS.rnn_size, \
                                              is_training=is_training)
                    return layer_output 
+               
+Class OctDilating(object):
+      """ Octave dilation CNN.
+          The model is proposed to overcome the deficit of spectral bias of neural networks. 
+          Dilated CNN is applied to obtain different frequecy band information, but limited by 
+          neural network are easily over-emphsizing the low frequency components. Octave operation will 
+          be applied layer-wise. 
+      """
+      
 
                
