@@ -84,7 +84,7 @@ class DFiltering(object):
                
                return output_ + input_tensor, output_tensor + output_
                
-         def deliated_f(self):
+      def deliated_f(self):
              with tf.variable_scope("embedding_layers"):
                    layer_input = self.conv1d_layer(self.input_tensor, dim=nfilters,
                                      is_training=self.is_training, scope="conv_in")
@@ -108,17 +108,54 @@ Class OctDilating(object):
          self.is_training=is_training
          self.kernel_size=kernel_size
          
-      def inputConv(inputs, config, in_channel, out_channel, kernel, pad, strides):
+      def inputConv(self, inputs, config, in_channel, out_channel, kernel, pad, strides):
           alpha_in, alpha_out = config
           hf_in_channel, hf_out_channel = int(in_channel*(1-alpha_in)), int(out_channel * (1-alpha_out))
           lf_in_channel, lf_out_channel = in_channel-hf_in_channel, out_channel-hf_out_channel
           
           hf_data  = inputs
-          hf_conv  = Con1D(hf_data, filters=hf_out_channel, strides=1) # one dimension
+          hf_conv  = Con1D(hf_data, filters=hf_out_channel, kernel_size=kernel, strides=1) # one dimension
           # avg_pool to yield the low frequency component
-          hf_
-          
-          
+          hf_pool  = tf.Avgpool(hf_data, kernel_size=kernel, strides=2, padding='valid')
+          lf_conv  = Con1D(hf_pool, filters=lf_out_channel, kernel_size=kernel, strides=1)
+         
+          self.hf_conv, self.lf_conv = hf_conv, lf_conv
+      
+       def outputConv(self, hf_data, lf_data, config, in_channel, out_channel, kernel,stride):
+           alpha_in, alpha_out = config
+           hf_in_channel = int(in_channel * (1-alpha_in))
+           hf_out_channel= int(out_channel* (1-alpha_out))
+           
+           hf_conv = Conv1D(hf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
+           lf_conv = Conv1D(lf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
+            
+           self.out_h = hf_conv + lf_conv
+         
+       def Ocvconv(self, hf_data, lf_data, config, in_channel, out_channel, kernel, stride):
+           alpha_in, alpha_out = config
+           hf_in_channel, hf_out_channel = int(in_channel * (1-alpha_in)), int(out_channel *(1-alpha_out))
+
+           lf_in_channel, lf_out_channel = in_channel-hf_in_channel, out_channel-hf_out_channel
+            
+           hf_conv = Conv1D(hf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
+           hf_pool = tf.Avgpool(hf_data, kernel_size=kernel, strides=1, padding='same')
+           hf_pool_conv = Conv1D(hf_pool, filters=lf_out_channel,kernel_size=kernel, strides=stride)
+           lf_conv = Conv1D(lf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
+           
+           if strides == (2, 2):
+               lf_upsample  = lf_conv
+               lf_down   = tf.Avgpool(lf_data, kernel_size=kernel,strides=stride, padding='SAME')
+           else:
+               lf_upsample = UpSampling1D(lf_conv, size=(2, 2), interpolation='nearest')
+               lf_down   = lf_data
+           
+            lf_down_conv = Conv1D(lf_down, filters=lf_out_channel, kernel_size=kernel, strides=stride, padding='SAME')
+            
+            out_h = hf_conv + lf_upsample
+            out_l = hf_pool_conv + lf_down_conv
+            
+            self.out_h, self.out_l = out_h, out_l  
+               
             
          
                
