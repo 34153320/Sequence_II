@@ -108,4 +108,17 @@ Class OctDilating(object):
          self.is_training=is_training
          self.kernel_size=kernel_size
          
+      def inputConv(inputs, config, in_channel, out_channel, kernel, pad, strides):
+          alpha_in, alpha_out = config
+          hf_in_channel, hf_out_channel = int(in_channel*(1-alpha_in)), int(out_channel * (1-alpha_out))
+          lf_in_channel, lf_out_channel = in_channel-hf_in_channel, out_channel-hf_out_channel
+          
+          hf_data  = inputs
+          hf_conv  = Con1D(hf_data, filters=hf_out_channel, strides=1) # one dimension
+          # avg_pool to yield the low frequency component
+          hf_
+          
+          
+            
+         
                
