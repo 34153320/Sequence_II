@@ -103,6 +103,9 @@ Class OctDilating(object):
           neural network are easily over-emphsizing the low frequency components. Octave operation will 
           be applied layer-wise. 
       """
-      
-
+      def __init__(self, n_filters, kernel_size, is_training, ):
+         self.n_filters  = n_filters
+         self.is_training=is_training
+         self.kernel_size=kernel_size
+         
                
