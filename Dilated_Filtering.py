@@ -155,6 +155,9 @@ Class OctDilating(object):
             out_l = hf_pool_conv + lf_down_conv
             
             self.out_h, self.out_l = out_h, out_l  
+       
+       def  
+       
                
             
          
