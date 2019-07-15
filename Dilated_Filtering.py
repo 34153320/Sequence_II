@@ -122,48 +122,54 @@ Class OctDilating(object):
 #           return out
 #             out = activation_wrapper(out, activation) 
 
-      def act_wrapper(self, input_tensor, act='tanh'):
+      def act_wrapper(self, input_tensor, act='tanh', name=None):
           """ Activation wrapper
           """
           if act=='tanh':
-              output_ = tf.nn.tanh(input_tensor)
+              output_ = tf.nn.tanh(input_tensor, name=('%s_tanh'%name))
           elif act='sig':
-              output_ = tf.nn.sigmoid(input_tensor)
+              output_ = tf.nn.sigmoid(input_tensor, name=('%s_sig'%name))
           elif act='relu':
-              output_ = tf.nn.relu(input_tensor)
+              output_ = tf.nn.relu(input_tensor, name=('%s_relu'%name))
           elif act='crelu':
-              output_ = tf.nn.crelu(input_tensor) # elu and other activation funcs are not listed here
+              output_ = tf.nn.crelu(input_tensor, name=('%s_crelu'%name)) # elu and other activation funcs are not listed here
           elif act=None:
               output_ = input_tensor
                
           return output_    
       
-      def conv1d(self, input_tensor, num_filter, kernel, stride=1, rate=1, pad='valid', name=None,
-                 bias=False, w_init=None, b=None, attr=None, groups=1):
+      def conv1d(self, inputs, nfilter, kernel, rate=1, pad='valid', name=None,
+                 bias=False, w_init=None, b=None, attr=None, groups=1): # strides for conv is fixed as 1
           # basic cnn module including dilated cnn
           if w_init is None:
-              conv_ = tf.layers.conv1d(inputs=input_tensor, filters=num_filter, kernel_size=kernel,
-                                       strides=stride, padding=pad, dilation_rate=rate, name=('%s_conv'%name), use_bias=bias)
+              conv_ = tf.layers.conv1d(inputs=inputs, filters=nfilter, kernel_size=kernel,
+                                       padding=pad, dilation_rate=rate, name=('%s_conv'%name), use_bias=bias)
           else:
               if b is None:
-                 conv_ = tf.layers.conv1d(inputs=input_tensor, filters=num_filter, kernel_size=kernel,
-                                        strides=stride, padding=pad, dilation_rate=rate, name=('%s_conv'%name), use_bias=bias,
+                 conv_ = tf.layers.conv1d(inputs=inputs, filters=nfilter, kernel_size=kernel,
+                                        padding=pad, dilation_rate=rate, name=('%s_conv'%name), use_bias=bias,
                                         kernel_initializer=w_init)
               else:
-                 conv_ = tf.layers.conv1d(inputs=input_tensor, filters=num_filter, kernel_size=kernel,
-                                         strides=stride, padding=pad, dilation_rate=rate, name=('%s_conv'%name), use_bias=bias,
+                 conv_ = tf.layers.conv1d(inputs=inputs, filters=nfilter, kernel_size=kernel,
+                                         padding=pad, dilation_rate=rate, name=('%s_conv'%name), use_bias=bias,
                                          kernel_initializer=w_init)
           return conv_
       
+      def BN(self, inputs, bn_m= 0.9, name=None):
+          return tf.layers.batch_normalization(inputs, momentum=bn_m, name=('%s_bn'%name))
+      
+      def AT(self, inputs, act=None, name=None):
+          return self.act_wrapper(inputs, act=act, )
+      
       # common functions for CVPR:
-      def conv_BA(self, input_tensor, num_filter, kernel, stride=1, rate=1, name=None,
+      def conv_BA(self, inputs, nfilter, kernel, rate=1, name=None,
                    bias=False, w_init=None, b=None, attr=None, groups=1, act="tanh"):
           """Conv module with batch_normalization and activation
           """
-          conv_ = self.conv1d(input_tensor, num_filter, kernel, stride=stride, rate=rate, name=name, 
+          conv_ = self.conv1d(inputs=inputs, nfilter=nfilter, kernel=kernel, rate=rate, name=name, 
                              bias=bias, w_init=w_init, b=b, attr=attr)
-          conv_b= tf.layers.batch_normalization(conv_, momentum=0.9, name='%s_bn' % name)
-          conv_a= self.act_wrapper(conv_b, act=act)
+          conv_b= BN(conv_, momentum=0.9, name='%s_bn' % name)
+          conv_a= AT(conv_b, act=act)
           return conv_a
          
       def Pooling(self, data, pool_type='avg', kernel=2, pad='valid', stride=2, name=None):
@@ -177,15 +183,18 @@ Class OctDilating(object):
       def UpSampling(self, lf_conv, scale=2, sample_type='nearest', num_args=1, name=None):
           return tf.keras.layers.UpSampling1D(size=scale, name=name)(lf_conv)
      # ============================================================================
-
-         
-      def inputConv(self, inputs, config, in_channel, out_channel, kernel, pad, strides):
+     # basic modules for octave cnn
+      def inputConv(self, inputs, config, in_channel, out_channel, kernel, pad='valid', stride=1):
           alpha_in, alpha_out = config
           hf_in_channel, hf_out_channel = int(in_channel*(1-alpha_in)), int(out_channel * (1-alpha_out))
           lf_in_channel, lf_out_channel = in_channel-hf_in_channel, out_channel-hf_out_channel
           
           hf_data  = inputs
-          hf_conv  = Con1D(hf_data, filters=hf_out_channel, kernel_size=kernel, strides=1) # one dimension
+          hf_conv  = self.conv1d(inputs=hf_data, nfilters=hf_out_channel, kernel_size=kernel, strides=1) # one dimension
+          
+          self, input_tensor, num_filter, kernel, stride=1, rate=1, pad='valid', name=None,
+                 bias=False, w_init=None, b=None, attr=None, groups=1
+         
           # avg_pool to yield the low frequency component
           hf_pool  = tf.avg_pool(hf_data, kernel_size=kernel, strides=2, padding='valid')
           lf_conv  = Con1D(hf_pool, filters=lf_out_channel, kernel_size=kernel, strides=1)
