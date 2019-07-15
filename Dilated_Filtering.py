@@ -168,8 +168,8 @@ Class OctDilating(object):
           """
           conv_ = self.conv1d(inputs=inputs, nfilter=nfilter, kernel=kernel, rate=rate, name=name, 
                              bias=bias, w_init=w_init, b=b, attr=attr)
-          conv_b= BN(conv_, momentum=0.9, name='%s_bn' % name)
-          conv_a= AT(conv_b, act=act)
+          conv_b= self.BN(conv_, momentum=0.9, name='%s_bn' % name)
+          conv_a= self.AT(conv_b, act=act)
           return conv_a
          
       def Pooling(self, data, pool_type='avg', kernel=2, pad='valid', stride=2, name=None):
@@ -182,61 +182,67 @@ Class OctDilating(object):
          
       def UpSampling(self, lf_conv, scale=2, sample_type='nearest', num_args=1, name=None):
           return tf.keras.layers.UpSampling1D(size=scale, name=name)(lf_conv)
-     # ============================================================================
-     # basic modules for octave cnn
-      def inputConv(self, inputs, config, in_channel, out_channel, kernel, pad='valid', stride=1):
+     # ==================================================================================================
+   
+     # basic modules for octave cnn: InputConv: input layer; OutputConv: output layer.
+      def InputConv(self, inputs, config, in_channel, out_channel, kernel, pad='valid', rate=1, stride=1, name=None):
+          # rate: ratio for dilated cnn
           alpha_in, alpha_out = config
           hf_in_channel, hf_out_channel = int(in_channel*(1-alpha_in)), int(out_channel * (1-alpha_out))
           lf_in_channel, lf_out_channel = in_channel-hf_in_channel, out_channel-hf_out_channel
           
           hf_data  = inputs
-          hf_conv  = self.conv1d(inputs=hf_data, nfilters=hf_out_channel, kernel_size=kernel, strides=1) # one dimension
-          
-          self, input_tensor, num_filter, kernel, stride=1, rate=1, pad='valid', name=None,
-                 bias=False, w_init=None, b=None, attr=None, groups=1
-         
-          # avg_pool to yield the low frequency component
-          hf_pool  = tf.avg_pool(hf_data, kernel_size=kernel, strides=2, padding='valid')
-          lf_conv  = Con1D(hf_pool, filters=lf_out_channel, kernel_size=kernel, strides=1)
-         
-          self.hf_conv, self.lf_conv = hf_conv, lf_conv
+          # one dimension reducing
+          if stride > 1:
+              hf_data =  Pooling(hf_data, pool_type='avg', kernel=stride, stride=stride, name=('%s_hf_down'))
+               
+          hf_conv  = self.conv1d(inputs=hf_data, nfilter=hf_out_channel, 
+                                 kernel=kernel, pad=pad, rate=1, name=('%s_hf_conv' % name)) 
+          hf_pool  = Pooling(hf_data, pool_type='avg', kernel=2, stride=2, name=('%s_hf_pool' % name))
+          lf_conv  = self.conv1d(inputs=hf_pool, nfilter=lf_out_channel, 
+                                 kernel=kernel, pad=pad, rate=1, name=('%s_lf_conv' % name))
+          return hf_conv, lf_conv
       
-       def outputConv(self, hf_data, lf_data, config, in_channel, out_channel, kernel,stride):
-           alpha_in, alpha_out = config
-           hf_in_channel = int(in_channel * (1-alpha_in))
-           hf_out_channel= int(out_channel* (1-alpha_out))
+      def OutputConv(self, hf_data, lf_data, config, in_channel, out_channel, kernel,pad='valid', rate=1, name=None):
+          alpha_in, alpha_out = config
+          hf_in_channel = int(in_channel * (1-alpha_in))
+          hf_out_channel= int(out_channel* (1-alpha_out))
            
-           hf_conv = Conv1D(hf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
-           lf_conv = Conv1D(lf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
+          hf_conv = self.conv1d(inputs=hf_data, nfilters=hf_out_channel, 
+                                kernel=kernel, pad=pad, rate=rate, name=('%s_hf_conv' % name))
+          lf_conv = self.conv1d(inputs=lf_data, nfilters=hf_out_channel, 
+                                kernel=kernel, pad=pad, rate=rate, name=('%s_lf_conv' % name))
             
-           self.out_h = hf_conv + lf_conv
+          return hf_conv + lf_conv # combined results
          
-       def Octconv(self, hf_data, lf_data, config, in_channel, out_channel, kernel, stride):
+      def Octconv(self, hf_data, lf_data, config, in_channel, out_channel, kernel, pad='valid', rate=1, name=None):
            alpha_in, alpha_out = config
            hf_in_channel, hf_out_channel = int(in_channel * (1-alpha_in)), int(out_channel *(1-alpha_out))
-
            lf_in_channel, lf_out_channel = in_channel-hf_in_channel, out_channel-hf_out_channel
             
-           hf_conv = Conv1D(hf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
-           hf_pool = tf.Avgpool(hf_data, kernel_size=kernel, strides=1, padding='same')
-           hf_pool_conv = Conv1D(hf_pool, filters=lf_out_channel,kernel_size=kernel, strides=stride)
-           lf_conv = Conv1D(lf_data, filters=hf_out_channel, kernel_size=kernel, strides=stride)
+           hf_conv = self.conv1d(inputs=hf_data, nfilter=hf_out_channel, 
+                                 kernel=kernel, pad=pad, rate=rate, name=('%s_hf_conv' % name))
+           hf_pool = Pooling(hf_conv,pool_type='avg', kernel=2, stride=2, name=('%s_hf_pool' % name))
+           hf_pool_conv = self.conv1d(inputs=hf_pool, nfilter=lf_out_channel,
+                                 kernel=kernel, pad=pad, rate=rate, name=('%s_hf_pool_conv' % name))
+         
+           lf_conv =  self.conv1d(inputs=lf_data, nfilter=hf_out_channel,
+                                 kernel=kernel, pad=pad, rate=rate, name=('%s_lf_conv' % name))
+           lf_upsample = UpSampling(lf_conv, size=2, sample_type='nearest', name=('%s_lf_upsample' % name))
+         
+           lf_down   = lf_data
+           lf_down_conv = self.conv1d(inputs=lf_down, nfilter=lf_out_channel,
+                                     kernel=kernel, pad=pad, rate=rate, name=('%s_lf_down_conv' % name))
            
-           if strides == (2, 2):
-               lf_upsample  = lf_conv
-               lf_down   = tf.Avgpool(lf_data, kernel_size=kernel,strides=stride, padding='SAME')
-           else:
-               lf_upsample = UpSampling1D(lf_conv, size=(2, 2), interpolation='nearest')
-               lf_down   = lf_data
-           
-            lf_down_conv = Conv1D(lf_down, filters=lf_out_channel, kernel_size=kernel, strides=stride, padding='SAME')
             
             out_h = hf_conv + lf_upsample
             out_l = hf_pool_conv + lf_down_conv
             
-            self.out_h, self.out_l = out_h, out_l  
-       
-       def oct_residual(self, input_data, ):
+            return out_h, out_l 
+       ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      
+       # dilated octave convolution neural network 
+       def dilated_octconv(self, input_data, ):
            """Dilation residual with ocatave cnn
            """
            with tf.variable_scope("input_layer"):
