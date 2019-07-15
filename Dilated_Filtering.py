@@ -165,7 +165,19 @@ Class OctDilating(object):
           conv_b= tf.layers.batch_normalization(conv_, momentum=0.9, name='%s_bn' % name)
           conv_a= self.act_wrapper(conv_b, act=act)
           return conv_a
- 
+         
+      def Pooling(self, data, pool_type='avg', kernel=2, pad='valid', stride=2, name=None):
+          if pool_type == 'avg':
+              return tf.layers.average_pooling(inputs=data, pool_size=kernel, strides=stride, 
+                                               padding=pad, name=name) 
+          elif pool_type == 'max':
+              return tf.layers.max_pooling(inputs=data, pool_size=kernel, strides=stride, 
+                                           padding=pad, name=name)
+         
+      def UpSampling(self, lf_conv, scale=2, sample_type='nearest', num_args=1, name=None):
+          return tf.keras.layers.UpSampling1D(size=scale, name=name)(lf_conv)
+     # ============================================================================
+
          
       def inputConv(self, inputs, config, in_channel, out_channel, kernel, pad, strides):
           alpha_in, alpha_out = config
