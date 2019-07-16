@@ -239,7 +239,14 @@ Class OctDilating(object):
             out_l = hf_pool_conv + lf_down_conv
             
             return out_h, out_l 
-       ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+       #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+       def residual_block(hf_data, lf_data, kernel, rate, block, config, ):
+           # residual blocks for each 
+           # low frequency and high frequency branches
+           
+            
+            
+      
       
        # dilated octave convolution neural network 
        def dilated_octconv(self, input_data, ):
