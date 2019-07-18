@@ -240,9 +240,10 @@ Class OctDilating(object):
             
             return out_h, out_l 
        #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-       def residual_block(hf_data, lf_data, kernel, rate, block, config, ):
+       def residual_block(hf_data, lf_data, kernel, rate, block, config, name):
            # residual blocks for each 
            # low frequency and high frequency branches
+           
            
             
             
