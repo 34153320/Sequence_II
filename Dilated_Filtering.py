@@ -240,10 +240,30 @@ Class OctDilating(object):
             
             return out_h, out_l 
        #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-       def residual_block(hf_data, lf_data, kernel, rate, block, config, name):
+       def residual_block(config, kernel, out_channel, 
+                          rate, block, config, name, hf_data=None, lf_data=None, group=0):
            # residual blocks for each 
-           # low frequency and high frequency branches
+           # config, the ratio for low frequency and high frequency in the channel
+           # group=0 refers to the input layer, group=4 refers to the last layer
+           # dim refers to the outputchannel
+           # output_h is the residual used for decoding, output_l is the residual signal 
+           # transfer to next layer-wise
+           if group==0:
+              in_channel = hf_data.get_shape().as_list()[-1]
+              
+              hf_conv, lf_conv=InputConv(hf_data, config=config, in_channel=in_channel, out_channel=out_channel,
+                                         kernel=kernel, rate=rate, name=name)
+              
+           elif group==5:
+              
+              
+          inputs, config, in_channel, out_channel, kernel, pad='valid', rate=1, stride=1, name=None
            
+           
+         
+          
+         
+          return  output_l, output_h # 
            
             
             
