@@ -240,22 +240,32 @@ Class OctDilating(object):
             
             return out_h, out_l 
        #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-       def residual_block(config, kernel, out_channel, 
-                          rate, block, config, name, hf_data=None, lf_data=None, group=0):
-           # residual blocks for each 
-           # config, the ratio for low frequency and high frequency in the channel
-           # group=0 refers to the input layer, group=4 refers to the last layer
-           # dim refers to the outputchannel
-           # output_h is the residual used for decoding, output_l is the residual signal 
-           # transfer to next layer-wise
+       def residual_block(inputs, config, kernel, out_channel, 
+                          rate, config, name=None, hf_data=None, lf_data=None, group=0):
+           # residual blocks for each dilated layer. config: the ratio for low frequency and high frequency in the channel
+           # group: ID of the dilated layer, 0 input layer & 1 middle layer & -1 last layer. Dim: the output channel
+           # Each layer original signals with diated ratio will be added.  
+            
+            
            if group==0:
               in_channel = hf_data.get_shape().as_list()[-1]
-              
-              hf_conv, lf_conv=InputConv(hf_data, config=config, in_channel=in_channel, out_channel=out_channel,
+              hf_conv, lf_conv=InputConv(inputs, config=config, in_channel=in_channel, out_channel=out_channel,
                                          kernel=kernel, rate=rate, name=name)
               
-           elif group==5:
+              return hf_conv, lf_conv
+           elif group==4: # the last layer
+              out_  = OutputConv(hf_data, lf_data, config, in_channel, out_channel, kernel,
+                         name=name)
+              input_hf, input_ 
+              return out_, None
+           else:
+              hf_conv, lf_conv = Octconv(hf_data, lf_datat, config=config, in_channel=in_channel,
+                                         out_channel=out_channel, kernel=kernel, )
               
+              self, hf_data, lf_data, config, in_channel, out_channel, kernel, pad='valid', rate=1, name=None
+              
+              
+          return   
               
           inputs, config, in_channel, out_channel, kernel, pad='valid', rate=1, stride=1, name=None
            
