@@ -241,62 +241,62 @@ Class OctDilating(object):
             return out_h, out_l 
        #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
        def residual_block(inputs, config, kernel, out_channel, 
-                          rate, config, name=None, hf_data=None, lf_data=None, group=0):
+                          rate=1, layer=1, name=None, hf_data=None, lf_data=None, group=0):
            # residual blocks for each dilated layer. config: the ratio for low frequency and high frequency in the channel
            # group: ID of the dilated layer, 0 input layer & 1 middle layer & -1 last layer. Dim: the output channel
            # Each layer original signals with diated ratio will be added.  
             
-            
-           if group==0:
-              in_channel = hf_data.get_shape().as_list()[-1]
-              hf_conv, lf_conv=InputConv(inputs, config=config, in_channel=in_channel, out_channel=out_channel,
-                                         kernel=kernel, rate=rate, name=name)
+           with tf.variable_scope("block_%d_%d" % (layer, rate))  
+                if group==0:
+                   in_channel = hf_data.get_shape().as_list()[-1]
+                   hf_conv, lf_conv=InputConv(inputs, config=config, in_channel=in_channel, 
+                                              out_channel=out_channel, kernel=kernel, 
+                                              rate=rate, name=name)
+                   hf_out, lf_out =  hf_conv, lf_conv
+                   return hf_out, lf_out
+                elif group==1:
+                   hf_conv, lf_conv = Octconv(hf_data, lf_data, config=config, in_channel=in_channel,
+                                         out_channel=out_channel, kernel=kernel, name="oct_conv")
+                   hf_dila, lf_dila = InputConv(inputs, config=config, in_channel=in_channel, 
+                                                out_channel=out_channel, kenerl=kernel, rate=rate, name=name)
+                   hf_out, lf_out   = hf_conv + hf_dila, lf_conv + lf_dila
               
-              return hf_conv, lf_conv
-           elif group==4: # the last layer
-              out_  = OutputConv(hf_data, lf_data, config, in_channel, out_channel, kernel,
-                         name=name)
-              input_hf, input_ 
-              return out_, None
-           else:
-              hf_conv, lf_conv = Octconv(hf_data, lf_datat, config=config, in_channel=in_channel,
-                                         out_channel=out_channel, kernel=kernel, )
+                   return hf_out, lf_out
+                elif group==-1: # the last layer
+                   out_  = OutputConv(hf_data, lf_data, config, in_channel, 
+                                      out_channel, kernel, name=name)
+               
+                   return out_
               
-              self, hf_data, lf_data, config, in_channel, out_channel, kernel, pad='valid', rate=1, name=None
-              
-              
-          return   
-              
-          inputs, config, in_channel, out_channel, kernel, pad='valid', rate=1, stride=1, name=None
-           
-           
-         
-          
-         
-          return  output_l, output_h # 
-           
-            
-            
-      
-      
        # dilated octave convolution neural network 
        def dilated_octconv(self, input_data, ):
            """Dilation residual with ocatave cnn
            """
            with tf.variable_scope("input_layer"):
-               
-                   layer_input = self.conv1d_layer(self.input_tensor, dim=nfilters,
-                                     is_training=self.is_training, scope="conv_in")
-           with tf.variable_scope("oct_layer")
-                   layer_output= 0
-                   for i in range(self.num_blocks):
-                        for i in [1, 2, 4, 8, 16]:  # dilated scope
-                             layer_input, layer_output = residual_block(layer_input, layer_output, size=11, \
-                                             rate=r, block=i, dim=FLAGS.rnn_size, \
-                                             is_training=is_training)
-           with tf.variable_scope("output_layer"):
+                layer_input = self.conv_BA(input_data, nfilter=self.nfilter, kernel=kernel, name="conv_input",
+                                           act="tanh", is_training=self.is_training):
+                   
+           with tf.variable_scope("oct_dilation"):
+                # octave style dilated cnn. Current framework only uses octave 2. 
+                # Potentially high ratio of octave can be used.
+                hf_data = None
+                lf_data = None
+                index_  = 0
+                for i in range(self.num_blocks):
+                    for j in [1, 2, 4, 8, 16]:  # dilated scope
+                        if  i+j > 1:
+                            index_ = 1
+                        elif i+j = 17: # last layer and last blocks:
+                            index_ = -1
+                        hf_data, lf_data = self.residual_block(layer_input, config, kernel, out_channel, rate=j,layer=i,
+                                                               hf_data=hf_data, lf_data=lf_data, name=name, 
+                                                               group=index_, is_training=self.is_training)
+                        
+           with tf.variable_scope("transformer_layer"):
+                # here we employ a basic transformer network to implement the output decoding
+                # A potential multihead transformer can be employed for output decoding 
+                  
                 
-                   return layer_output 
                
             
          
